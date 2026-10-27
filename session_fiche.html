@@ -134,6 +134,9 @@ textarea{resize:vertical;min-height:70px}
 .sess-date{font-size:12px;color:var(--muted);min-width:80px}
 .sess-ctx{font-size:13px;font-weight:600;flex:1}
 .sess-score{font-size:12px;color:var(--gold);font-weight:700}
+/* DELETE button in session list */
+.sess-del{background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:4px 8px;line-height:1;border-radius:4px;transition:background .12s;flex-shrink:0}
+.sess-del:hover{background:rgba(231,76,60,.12)}
 </style>
 </head>
 <body>
@@ -364,6 +367,10 @@ let objRowData = [{obj:'',criteria:''},{obj:'',criteria:''},{obj:'',criteria:''}
 let exercises = [];
 let selfScores = {};
 
+// ── FIX C: store pending eval restore data ──
+let _pendingEvalKpi = [];
+let _pendingEvalObjs = [];
+
 const SELF_DIMS = [
   {key:'preparation', label:'Preparation', q:'Was the session plan adapted to the actual group?'},
   {key:'time', label:'Time management', q:'Were transitions and duration respected?'},
@@ -387,7 +394,6 @@ function updateCtxDisplay(){
   document.getElementById('ctx-display').textContent = parts.join(' › ') || 'No context';
   document.getElementById('list-title').textContent = 'Session Log — ' + (CTX.sport || 'All sports');
   document.getElementById('list-sub').textContent = parts.join(' › ');
-  // Show coach name in topbar if available
   const coachEl = document.getElementById('ctx-coach');
   if(coachEl) coachEl.textContent = CTX.coachName || CTX.coach || '';
 }
@@ -396,7 +402,7 @@ function goBackToMidan(){
   if(window.opener && !window.opener.closed){
     window.close();
   } else {
-    location.href = 'MAS_Coach_Interface_v4.html';
+    location.href = 'index.html';
   }
 }
 
@@ -406,7 +412,11 @@ function switchPhase(id, el){
   document.querySelectorAll('.phase-tab').forEach(t=>t.classList.remove('on'));
   document.getElementById('phase-'+id).classList.add('on');
   el.classList.add('on');
-  if(id==='eval') syncEvalFromPlan();
+  if(id==='eval'){
+    syncEvalFromPlan();
+    // FIX C: restore saved eval values after syncEvalFromPlan rebuilds the DOM
+    restoreEvalFields(_pendingEvalKpi, _pendingEvalObjs);
+  }
 }
 
 function showList(){
@@ -435,6 +445,7 @@ async function loadSessions(){
   }
 }
 
+// FIX D: added delete button to each session row
 function renderSessionList(){
   const el = document.getElementById('session-list');
   if(!sessions.length){
@@ -448,12 +459,26 @@ function renderSessionList(){
         <div style="font-weight:700">${s.plan_context||s.sport||''}</div>
         <div style="font-size:12px;color:var(--muted)">W${s.week_num||'?'} · ${s.phase||''} · ${s.athletes_present||'?'} athletes</div>
       </div>
-      <div style="text-align:right">
+      <div style="text-align:right;flex-shrink:0">
         ${s.self_score ? `<div class="sess-score">${s.self_score}/30</div>` : ''}
         <div style="font-size:11px;color:var(--muted)">${s.obj2_achieved||0}/${s.obj2_total||0} obj.</div>
       </div>
+      <button class="sess-del" onclick="deleteSession('${s.id}',event)" title="Delete session">✕</button>
     </div>
   `).join('');
+}
+
+// FIX D: delete session function
+async function deleteSession(id, event){
+  event.stopPropagation();
+  if(!confirm('Delete this session? This cannot be undone.')) return;
+  try {
+    const {error} = await sb.from('session_logs').delete().eq('id', id);
+    if(error) throw error;
+    await loadSessions();
+  } catch(e){
+    alert('Could not delete session: ' + e.message);
+  }
 }
 
 function formatDate(d){ if(!d) return '—'; const dt=new Date(d); return dt.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}); }
@@ -461,12 +486,13 @@ function formatDate(d){ if(!d) return '—'; const dt=new Date(d); return dt.toL
 // ── NEW / OPEN SESSION ──
 function newSession(){
   currentSessionId = null;
+  _pendingEvalKpi = [];
+  _pendingEvalObjs = [];
   resetForm();
   document.getElementById('form-session-id').textContent = 'New session';
   document.getElementById('s-week').value = CTX.week;
   const today = new Date().toISOString().slice(0,10);
   document.getElementById('s-date').value = today;
-  // switch to first tab
   switchPhase('plan', document.querySelector('.phase-tab'));
   showForm();
 }
@@ -493,10 +519,9 @@ async function openSession(id){
   // Exercises
   exercises = tryParse(sess.exercises, []);
   renderExercises();
-  // Eval
-  const evalL1 = tryParse(sess.eval_kpi, []);
-  // obj eval
-  const evalL2 = tryParse(sess.eval_objectives, [{},{},{}]);
+  // FIX C: store eval data for restoration when user switches to Eval tab
+  _pendingEvalKpi = tryParse(sess.eval_kpi, []);
+  _pendingEvalObjs = tryParse(sess.eval_objectives, []);
   document.getElementById('eval-summary').value = sess.eval_summary||'';
   // Feedback
   document.getElementById('fb-physical').value = sess.fb_physical||'';
@@ -519,6 +544,31 @@ async function openSession(id){
   document.getElementById('form-session-id').textContent = 'Session #'+id.slice(0,8)+'…';
   switchPhase('plan', document.querySelector('.phase-tab'));
   showForm();
+}
+
+// FIX C: restore saved eval field values into the dynamically generated eval DOM
+function restoreEvalFields(evalKpi, evalObjs){
+  // Restore KPI observed + evidence
+  if(evalKpi && evalKpi.length){
+    evalKpi.forEach((k,i)=>{
+      const obsEl = document.querySelector(`.kpi-obs-post[data-i="${i}"]`);
+      const evEl  = document.querySelector(`.kpi-evidence[data-i="${i}"]`);
+      // kpi-obs-post: prefer dedicated observed field from eval_kpi, fallback to plan observed
+      if(obsEl && k.observed_post !== undefined) obsEl.value = k.observed_post||'';
+      if(evEl  && k.evidence     !== undefined) evEl.value  = k.evidence||'';
+    });
+  }
+  // Restore obj eval results
+  if(evalObjs && evalObjs.length){
+    evalObjs.forEach((o,i)=>{
+      const resEl = document.querySelector(`.obj-result[data-i="${i}"]`);
+      const pctEl = document.querySelector(`.obj-pct[data-i="${i}"]`);
+      const evEl  = document.querySelector(`.obj-evidence[data-i="${i}"]`);
+      if(resEl) resEl.value = o.result||'';
+      if(pctEl) pctEl.value = o.pct||'';
+      if(evEl)  evEl.value  = o.evidence||'';
+    });
+  }
 }
 
 function resetForm(){
@@ -553,6 +603,8 @@ function resetForm(){
       <div><label>Decision</label><input type="text" class="decision-text" placeholder="Adjust…"></div>
       <div><label>Based on</label><input type="text" class="decision-basis" placeholder="Observation from today…"></div>
     </div>`;
+  _pendingEvalKpi = [];
+  _pendingEvalObjs = [];
   setSave('','Ready');
 }
 
@@ -614,7 +666,7 @@ function syncEvalFromPlan(){
       <div style="border-bottom:1px solid var(--border);padding:10px 0;display:grid;grid-template-columns:2fr 1fr 1fr 2fr;gap:10px;align-items:center">
         <div style="font-weight:600;font-size:13px">${esc(k.name)}</div>
         <div style="text-align:center"><span style="color:var(--muted);font-size:11px">Target</span><br><strong>${esc(k.target)||'—'}</strong></div>
-        <div style="text-align:center"><span style="color:var(--muted);font-size:11px">Observed</span><br><input type="text" class="kpi-obs-post" data-i="${i}" value="${esc(k.observed||'')}" style="width:80px;text-align:center"></div>
+        <div style="text-align:center"><span style="color:var(--muted);font-size:11px">Observed</span><br><input type="text" class="kpi-obs-post" data-i="${i}" value="" style="width:80px;text-align:center"></div>
         <div><label style="margin-bottom:4px">Evidence / Proof</label><input type="text" class="kpi-evidence" data-i="${i}" placeholder="Video, chrono, test sheet…"></div>
       </div>`).join('');
   }
@@ -734,14 +786,20 @@ async function saveSession(){
   setSave('saving','Saving…');
   collectExercises();
 
-  // collect eval
   const kpiTargets = getKpiRows();
   const objL2 = getObjRows();
 
+  // FIX C: collect eval KPI from the Eval tab UI (observed_post + evidence), not from plan tab
+  const evalKpiMerged = kpiTargets.map((k,i)=>({
+    ...k,
+    observed_post: (document.querySelector(`.kpi-obs-post[data-i="${i}"]`)||{}).value||'',
+    evidence:      (document.querySelector(`.kpi-evidence[data-i="${i}"]`)||{}).value||''
+  }));
+
   // Obj eval results
   const evalObjs = [0,1,2].map(i=>({
-    result: (document.querySelector(`.obj-result[data-i="${i}"]`)||{}).value||'',
-    pct: (document.querySelector(`.obj-pct[data-i="${i}"]`)||{}).value||'',
+    result:   (document.querySelector(`.obj-result[data-i="${i}"]`)||{}).value||'',
+    pct:      (document.querySelector(`.obj-pct[data-i="${i}"]`)||{}).value||'',
     evidence: (document.querySelector(`.obj-evidence[data-i="${i}"]`)||{}).value||''
   }));
 
@@ -764,7 +822,7 @@ async function saveSession(){
     kpi_targets: JSON.stringify(kpiTargets),
     objectives_l2: JSON.stringify(objL2),
     exercises: JSON.stringify(exercises),
-    eval_kpi: JSON.stringify(kpiTargets),
+    eval_kpi: JSON.stringify(evalKpiMerged),   // FIX C: now contains observed_post + evidence
     eval_objectives: JSON.stringify(evalObjs),
     eval_summary: document.getElementById('eval-summary').value,
     decisions: JSON.stringify(getDecisions()),
@@ -794,13 +852,15 @@ async function saveSession(){
     }
     console.log('[MIDAN Save] result:', result);
     if(result.error) throw result.error;
+    // FIX C: update pending eval restore so re-opening Eval tab shows fresh data
+    _pendingEvalKpi = evalKpiMerged;
+    _pendingEvalObjs = evalObjs;
     setSave('ok','Saved ✓');
     await loadSessions();
   } catch(e){
     console.error('[MIDAN Save] error:', e);
-    setSave('err','Erreur : '+e.message);
-    // Show visible alert so error is never silent
-    alert('❌ Erreur sauvegarde :\n' + e.message + '\n\nVérifiez la console (F12) pour les détails.');
+    setSave('err','Error: '+e.message);
+    alert('❌ Save error:\n' + e.message + '\n\nCheck the console (F12) for details.');
   }
 }
 
