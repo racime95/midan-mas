@@ -1744,8 +1744,8 @@ async function switchGroup(newAg){
   toast(`Switched to ${newAg} — loading data…`, 'ok');
   setSave('saving', 'Switching…');
 
-  // Reload Annual Plan (plan_context-filtered) + KPIs + Objectives (filtered by age_group)
-  await Promise.all([loadAnnual(), loadKPIs(), loadObjectives()]);
+  // Reload Annual Plan, KPIs, Objectives, and Weekly data (all plan_context-filtered)
+  await Promise.all([loadAnnual(), loadKPIs(), loadObjectives(), loadWeekly()]);
   renderAnnualGrid();
   // Refresh Season Calendar if currently visible
   const scView = document.getElementById('view-season');
@@ -2015,13 +2015,16 @@ async function delKPI(id){
 // ANNUAL PLAN
 // ══════════════════════════════════════════════════
 async function loadAnnual(){
-  // Filter by plan_context when set (discipline+age group), otherwise fall back to coach_id only
+  // Bug A fix: always filter by exact plan_context to prevent cross-discipline data bleed.
+  // For discipline+group coaches (PLAN_CONTEXT = "Sport|Disc|AG"), filter by that exact value.
+  // For sport-level coaches (no discipline), filter for null plan_context only.
   let query = sb.from('annual_weeks').select('*').eq('coach_id',COACH.id);
   if(PLAN_CONTEXT && PLAN_CONTEXT !== COACH.sport){
+    // Discipline+group context: strict match — no fallback to null rows
     query = query.eq('plan_context', PLAN_CONTEXT);
   } else {
-    // No group context: load rows with no plan_context or null
-    query = query.or('plan_context.is.null,plan_context.eq.'+COACH.sport);
+    // Sport-level only: load rows explicitly saved without a discipline context
+    query = query.is('plan_context', null);
   }
   const {data}=await query.order('week_num');
   annualData={};
@@ -2198,7 +2201,14 @@ async function duplicatePlanTo(){
 // WEEKLY FOLLOW-UP
 // ══════════════════════════════════════════════════
 async function loadWeekly(){
-  const {data}=await sb.from('weekly_entries').select('*').eq('coach_id',COACH.id).order('week_num');
+  // Bug E fix: filter by plan_context so each discipline/age group has its own weekly data.
+  let q = sb.from('weekly_entries').select('*').eq('coach_id',COACH.id);
+  if(PLAN_CONTEXT && PLAN_CONTEXT !== COACH.sport){
+    q = q.eq('plan_context', PLAN_CONTEXT);
+  } else {
+    q = q.is('plan_context', null);
+  }
+  const {data}=await q.order('week_num');
   weeklyData={};
   (data||[]).forEach(r=>weeklyData[r.week_num]=r);
   renderWeekLog();
@@ -2241,10 +2251,21 @@ async function saveWeek(){
     training_days:document.getElementById('wf-days')?.value||'',
     time_slot:document.getElementById('wf-time')?.value||'',
     status:document.getElementById('wf-status').value,
+    plan_context:PLAN_CONTEXT||null,
     updated_at:new Date().toISOString()
   };
-  const {error}=await sb.from('weekly_entries').upsert(payload,{onConflict:'coach_id,week_num'});
-  if(error){setSave('err','Error');toast('Save failed.','err');}
+  // Bug E fix: upsert keyed on coach_id,week_num,plan_context so each group has its own row.
+  // NOTE: requires plan_context column on weekly_entries table.
+  // If that column doesn't exist yet, the upsert will error with a 42703 (column not found).
+  // In that case we fall back to the old key so data is never silently lost.
+  let {error}=await sb.from('weekly_entries').upsert(payload,{onConflict:'coach_id,week_num,plan_context'});
+  if(error && (error.code==='42703'||error.message?.includes('plan_context'))){
+    // Column not yet added — fall back to old conflict key and warn
+    const fb=await sb.from('weekly_entries').upsert(payload,{onConflict:'coach_id,week_num'});
+    error=fb.error;
+    if(!fb.error) toast('Saved (migrate weekly_entries to add plan_context column to fix Bug E).','ok');
+  }
+  if(error){setSave('err','Error');toast('Save failed: '+error.message,'err');}
   else{weeklyData[currentWeek]=payload;setSave('ok','Saved');toast('Week '+currentWeek+' saved.','ok');renderWeekLog();}
 }
 function clearWeekForm(){['wf-period','wf-load','wf-spl','wf-sac','wf-hpl','wf-hac','wf-kpi','wf-cpl','wf-cac','wf-comp','wf-res','wf-athl','wf-cnote','wf-status'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});}
@@ -2485,7 +2506,7 @@ async function saveMonthly(){
     toast('Monthly report submitted.','ok');
   }
 }
-function clearMonthly(){document.querySelectorAll('[id^=mr-]').forEach(el=>{if(el.tagName==='INPUT'||el.tagName==='TEXTAREA')el.value='';});}
+function clearMonthly(){document.querySelectorAll('[id^=mr-]').forEach(el=>{if(el.id==='mr-month')return;if(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT')el.value='';});}
 
 // ══════════════════════════════════════════════════
 // ATHLETES ROSTER
