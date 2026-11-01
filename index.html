@@ -1729,7 +1729,7 @@ async function switchGroup(newAg){
   if(newAg === ACTIVE_AGE_GROUP) return;
 
   ACTIVE_AGE_GROUP = newAg;
-  PLAN_CONTEXT = `${COACH.sport}|${ACTIVE_DISCIPLINE}|${newAg}`.replace(/–/g, '-');
+  PLAN_CONTEXT = COACH.sport;
 
   // Persist updated context
   try {
