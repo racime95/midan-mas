@@ -433,10 +433,11 @@ function showForm(){
 
 // ── SESSIONS LIST ──
 async function loadSessions(){
+ 
+   
   try {
     let q = sb.from('session_logs').select('*').order('session_date', {ascending:false});
     if(CTX.coach) q = q.eq('coach_id', CTX.coach);
-    async function loadSessions(){   try {     let q = sb.from('session_logs').select('*').order('session_date', {ascending:false});     if(CTX.coach) q = q.eq('coach_id', CTX.coach);     const {data, error} = await q.limit(50);
     const {data, error} = await q.limit(50);
     if(error) throw error;
     sessions = data || [];
@@ -445,9 +446,7 @@ async function loadSessions(){
     document.getElementById('session-list').innerHTML =
       '<div style="color:var(--red);padding:20px;text-align:center">Could not load sessions. Table may not exist yet.<br><small>'+e.message+'</small></div>';
   }
-}
-
-// FIX D: added delete button to each session row
+}// FIX D: added delete button to each session row
 function renderSessionList(){
   const el = document.getElementById('session-list');
   if(!sessions.length){
