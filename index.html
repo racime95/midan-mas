@@ -1684,7 +1684,7 @@ async function doLogin(){
   COACH = coach;
   ACTIVE_DISCIPLINE = disc || null;
   ACTIVE_AGE_GROUP  = ag  || null;
-  PLAN_CONTEXT = disc && ag ? `${sport}|${disc}|${ag}`.replace(/–/g, '-') : sport;
+  PLAN_CONTEXT = sport;
 
   // Persist session across refresh
   try {
