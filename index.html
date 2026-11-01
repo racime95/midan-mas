@@ -2050,7 +2050,7 @@ function inp(n,field,val,w,type='text',opts){
       <option value="" ${!val?'selected':''}>—</option><option value="H" ${val==='H'?'selected':''}>H</option><option value="M" ${val==='M'?'selected':''}>M</option><option value="L" ${val==='L'?'selected':''}>L</option>
     </select>`;
   }
-  return`<input type="${type==='num'?'number':'text'}" style="width:${w}px;font-size:10px" value="${val||''}" onchange="updateAnnual(${n},'${field}',this.value)" ${type==='num'?'min="0" max="'+(field.includes('sess')?'7':'999')+'"':''}>`;
+  return`<input type="${type==='num'?'number':'text'}" style="width:${w}px;font-size:10px" value="${val||''}" onchange="updateAnnual(${n},'${field}',this.value)" ${type==='num'?'min="0" max="'+(field.includes('sess')?'99':'999')+'"':''}>`;
 }
 
 function renderAnnualGrid(){
