@@ -2024,7 +2024,7 @@ async function loadAnnual(){
     query = query.eq('plan_context', PLAN_CONTEXT);
   } else {
     // Sport-level only: load rows explicitly saved without a discipline context
-    query = query.is('plan_context', null);
+    query = query.eq('plan_context', COACH.sport);
   }
   const {data}=await query.order('week_num');
   annualData={};
@@ -2206,7 +2206,7 @@ async function loadWeekly(){
   if(PLAN_CONTEXT && PLAN_CONTEXT !== COACH.sport){
     q = q.eq('plan_context', PLAN_CONTEXT);
   } else {
-    q = q.is('plan_context', null);
+    q = q.eq('plan_context', COACH.sport);
   }
   const {data}=await q.order('week_num');
   weeklyData={};
