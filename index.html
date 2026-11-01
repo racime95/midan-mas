@@ -1623,7 +1623,7 @@ const SPORT_CONFIG = {
     if(!s) return;
     const saved = JSON.parse(s);
     if(!saved || !saved.coach) return;
-    COACH = saved.coach;       COACH.id = saved.coach.sport; COACH.id = saved.coach.sport; // ensure id is always sport name
+    COACH = saved.coach;
     ACTIVE_DISCIPLINE = saved.disc || null;
     ACTIVE_AGE_GROUP  = saved.ag  || null;
     PLAN_CONTEXT      = saved.ctx || saved.coach.sport;
@@ -1674,7 +1674,7 @@ async function doLogin(){
   // Try to sync with Supabase (non-blocking)
   try {
     const {data} = await sb.from('coaches').select('id').eq('sport',sport).eq('pin',pin).single();
-    // coach.id stays as sport name (used as coach_id in annual_weeks)
+    if(data) coach.id = data.id;
   } catch(e) { /* continue without Supabase sync */ }
 
   COACH = coach;
@@ -1794,7 +1794,7 @@ function openDashboard(){
     sport:  COACH ? COACH.sport : '',
     planContext: PLAN_CONTEXT || ''
   });
-  window.open('window.open('https://racime95.github.io/midan-director/dashboard_sessions.html?' + p.toString(), '_blank');' + p.toString(), '_blank');
+  window.open('https://racime95.github.io/midan-director/dashboard_sessions.html?' + p.toString(), '_blank');
 }
 
 // ══════════════════════════════════════════════════
