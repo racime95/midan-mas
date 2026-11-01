@@ -436,7 +436,7 @@ async function loadSessions(){
   try {
     let q = sb.from('session_logs').select('*').order('session_date', {ascending:false});
     if(CTX.coach) q = q.eq('coach_id', CTX.coach);
-    if(CTX.planContext) q = q.eq('plan_context', CTX.planContext);
+    async function loadSessions(){   try {     let q = sb.from('session_logs').select('*').order('session_date', {ascending:false});     if(CTX.coach) q = q.eq('coach_id', CTX.coach);     const {data, error} = await q.limit(50);
     const {data, error} = await q.limit(50);
     if(error) throw error;
     sessions = data || [];
