@@ -2066,10 +2066,10 @@ function renderAnnualGrid(){
       <td style="font-size:9px;color:var(--slate);white-space:nowrap;line-height:1.4"><span style="font-size:9px;font-weight:700;color:var(--navy)">${weekStart(n)}</span><br><span style="color:#999">→ ${weekEnd(n)}</span><br><span style="font-size:8px;color:var(--gold);font-weight:600">${weekMonth(n).slice(0,3)}'${weekYear(n).slice(2)}</span></td>
       <td>${inp(n,'period',r.period||'PB',60,'select',['PB','PP1','PP2','PP3','PT','PPF','COMP','PM','REST'])}</td>
       <td>${inp(n,'intensity',r.intensity,'42','num')}</td>
-      <td>${inp(n,'sessions_pl',r.sessions_pl,'34','num')}</td>
-      <td>${inp(n,'sessions_ac',r.sessions_ac,'34','num')}</td>
-      <td>${inp(n,'hours_pl',r.hours_pl,'38','num')}</td>
-      <td>${inp(n,'hours_ac',r.hours_ac,'38','num')}</td>
+      <td>${inp(n,'sessions_pl',r.sessions_pl,'42','num')}</td>
+      <td>${inp(n,'sessions_ac',r.sessions_ac,'42','num')}</td>
+      <td>${inp(n,'hours_pl',r.hours_pl,'46','num')}</td>
+      <td>${inp(n,'hours_ac',r.hours_ac,'46','num')}</td>
       <td><div style="font-size:11px;font-weight:600;color:${pCol};text-align:center">${pct!==null?pct+'%':'—'}</div>
           <div class="prog-bar"><div class="prog-fill" style="width:${pct||0}%;background:${pCol}"></div></div></td>
       <td>${inp(n,'age_group_active',r.age_group_active,'60','select',['','U10','U12','U14','U16','All'])}</td>
