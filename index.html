@@ -1662,7 +1662,7 @@ async function doLogin(){
     err.style.display='block';
     return;
   }
-  // Require discipline + age group if sport has config
+  // Discipline + age group are optional — data is stored at sport level
   if(SPORT_CONFIG[sport] && (!disc || !ag)){
     err.textContent='Please select your discipline and age group.';
     err.style.display='block';
