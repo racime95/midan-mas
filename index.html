@@ -1663,11 +1663,7 @@ async function doLogin(){
     return;
   }
   // Discipline + age group are optional — data is stored at sport level
-  if(SPORT_CONFIG[sport] && (!disc || !ag)){
-    err.textContent='Please select your discipline and age group.';
-    err.style.display='block';
-    return;
-  }
+
   // Local authentication
   const coach = COACHES_LOCAL.find(c => c.sport === sport && c.pin === pin && c.active);
   if(!coach){
