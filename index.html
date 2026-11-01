@@ -1674,7 +1674,7 @@ async function doLogin(){
   // Try to sync with Supabase (non-blocking)
   try {
     const {data} = await sb.from('coaches').select('id').eq('sport',sport).eq('pin',pin).single();
-    if(data) coach.id = data.id;
+    // coach.id stays as sport name (used as coach_id in annual_weeks)
   } catch(e) { /* continue without Supabase sync */ }
 
   COACH = coach;
