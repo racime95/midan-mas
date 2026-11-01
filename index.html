@@ -1623,7 +1623,7 @@ const SPORT_CONFIG = {
     if(!s) return;
     const saved = JSON.parse(s);
     if(!saved || !saved.coach) return;
-    COACH = saved.coach; COACH.id = saved.coach.sport; // ensure id is always sport name
+    COACH = saved.coach;       COACH.id = saved.coach.sport; COACH.id = saved.coach.sport; // ensure id is always sport name
     ACTIVE_DISCIPLINE = saved.disc || null;
     ACTIVE_AGE_GROUP  = saved.ag  || null;
     PLAN_CONTEXT      = saved.ctx || saved.coach.sport;
