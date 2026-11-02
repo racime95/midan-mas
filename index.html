@@ -1673,8 +1673,8 @@ async function doLogin(){
   }
   // Try to sync with Supabase (non-blocking)
   try {
-    const {data} = await sb.from('coaches').select('id').eq('sport',sport).eq('pin',pin).single();
-    if(data) coach.id = data.id;
+    await sb.from('coaches').select('id').eq('sport',sport).eq('pin',pin).single();
+    
   } catch(e) { /* continue without Supabase sync */ }
 
   COACH = coach;
