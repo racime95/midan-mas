@@ -2114,7 +2114,14 @@ async function updateAnnual(w,field,val){
   clearTimeout(_annualTimer[w]);
   _annualTimer[w]=setTimeout(async()=>{
     setSave('saving','Saving…');
-    const row={...annualData[w],coach_id:COACH.id,week_num:w,plan_context:PLAN_CONTEXT,updated_at:new Date().toISOString()};
+    // Only send fields that are explicitly set — never send undefined/null for fields
+    // the coach hasn't touched, to avoid overwriting existing cap_* and met_* values.
+    const base={coach_id:COACH.id,week_num:w,plan_context:PLAN_CONTEXT,updated_at:new Date().toISOString()};
+    const row={};
+    Object.assign(row,base);
+    Object.keys(annualData[w]).forEach(k=>{
+      if(annualData[w][k]!==undefined && annualData[w][k]!==null && annualData[w][k]!=='') row[k]=annualData[w][k];
+    });
     const {error}=await sb.from('annual_weeks').upsert(row,{onConflict:'coach_id,week_num,plan_context'});
     setSave(error?'err':'ok',error?'Save error':'Saved');
   },800);
