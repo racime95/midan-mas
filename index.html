@@ -1680,7 +1680,7 @@ async function doLogin(){
   COACH = coach;
   ACTIVE_DISCIPLINE = disc || null;
   ACTIVE_AGE_GROUP  = ag  || null;
-  PLAN_CONTEXT = sport;
+  PLAN_CONTEXT = (disc && ag) ? `${sport}|${disc}|${ag}` : sport;
 
   // Persist session across refresh
   try {
@@ -1725,7 +1725,7 @@ async function switchGroup(newAg){
   if(newAg === ACTIVE_AGE_GROUP) return;
 
   ACTIVE_AGE_GROUP = newAg;
-  PLAN_CONTEXT = COACH.sport;
+  PLAN_CONTEXT = (ACTIVE_DISCIPLINE && newAg) ? `${COACH.sport}|${ACTIVE_DISCIPLINE}|${newAg}` : COACH.sport;
 
   // Persist updated context
   try {
