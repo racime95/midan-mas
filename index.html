@@ -2658,17 +2658,18 @@ async function addStaff(){
     {id:'st_email',  label:'Work Email',                type:'text',   val:''},
     {id:'st_phone',  label:'Phone',                     type:'text',   val:''},
     {id:'st_arrival',label:'Arrival Date (YYYY-MM-DD)', type:'text',   val:''},
-    {id:'st_parea',  label:'Program Area',              type:'select', opts:['Creating Pathways','General Public Coaching and Engagement','Academy Coaching'],val:'Academy Coaching'},
+    {id:'st_parea',  label:'Program Area (select all that apply)', type:'checkboxes', opts:['Academy Coaching','General Public Coaching and Engagement'],val:[]},
   ], async function(v){
     if(!v.st_last){toast('Last name is required.','err');return false;}
     setSave('saving','Saving…');
+    const pareaVal=Array.isArray(v.st_parea)&&v.st_parea.length?v.st_parea.join(', '):null;
     const {error}=await sb.from('staff_members').insert({
       coach_id:COACH.id,last_name:v.st_last,first_name:v.st_first,role:v.st_role,
       licence_level:v.st_lic,federation:v.st_fed,
       licence_exp:v.st_licexp||null,firstaid_exp:v.st_aidexp||null,
       safeguarding:v.st_safe,contract_end:v.st_contend||null,
       work_email:v.st_email,phone:v.st_phone,
-      arrival_date:v.st_arrival||null,program_area:v.st_parea||null
+      arrival_date:v.st_arrival||null,program_area:pareaVal
     });
     if(error){setSave('err','Error');toast('Save failed.','err');}
     else{setSave('ok','Saved');toast('Staff member added.','ok');loadStaff();}
@@ -3057,14 +3058,17 @@ function openModal(title,fields,cb){
     let input='';
     if(f.type==='select'){
       input=`<select id="${f.id}">${(f.opts||[]).map(o=>`<option value="${o}" ${o===f.val?'selected':''}>${o}</option>`).join('')}</select>`;
+    } else if(f.type==='checkboxes'){
+      const checked=Array.isArray(f.val)?f.val:(f.val?[f.val]:[]);
+      input=`<div id="${f.id}" style="display:flex;flex-direction:column;gap:6px;padding:4px 0">${(f.opts||[]).map((o,i)=>`<label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" data-cbgroup="${f.id}" value="${o}" ${checked.includes(o)?'checked':''}> ${o}</label>`).join('')}</div>`;
     } else {
       const safe=(f.val||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       input=`<input type="text" id="${f.id}" value="${safe}" placeholder="${f.placeholder||''}">`;
     }
-    return`<div class="um-fg"><label for="${f.id}">${f.label}${f.required?' *':''}</label>${input}</div>`;
+    return`<div class="um-fg"><label>${f.label}${f.required?' *':''}</label>${input}</div>`;
   }).join('');
   document.getElementById('um-overlay').classList.add('open');
-  const first=document.querySelector('#um-body input,#um-body select');
+  const first=document.querySelector('#um-body input[type="text"],#um-body select');
   if(first)setTimeout(()=>first.focus(),80);
 }
 function closeModal(){
@@ -3075,7 +3079,17 @@ async function submitModal(){
   if(!_modalCb)return;
   const inputs=document.querySelectorAll('#um-body [id]');
   const v={};
-  inputs.forEach(el=>v[el.id]=el.value.trim());
+  inputs.forEach(el=>{
+    if(el.dataset.cbgroup)return; // skip individual checkboxes — handled below
+    v[el.id]=el.tagName==='DIV'?null:el.value.trim();
+  });
+  // collect checkbox groups
+  document.querySelectorAll('#um-body input[type="checkbox"]').forEach(cb=>{
+    const g=cb.dataset.cbgroup;
+    if(!g)return;
+    if(!v[g])v[g]=[];
+    if(cb.checked)v[g].push(cb.value);
+  });
   const result=await _modalCb(v);
   if(result!==false)closeModal();
 }
@@ -3084,8 +3098,8 @@ document.getElementById('um-overlay').addEventListener('click',function(e){if(e.
 // Enter key submits only from the last field or a select; Escape closes
 document.getElementById('um-overlay').addEventListener('keydown',function(e){
   if(e.key==='Escape'){closeModal();return;}
-  if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'){
-    const inputs=Array.from(document.querySelectorAll('#um-body input,#um-body select'));
+  if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'&&e.target.type!=='checkbox'){
+    const inputs=Array.from(document.querySelectorAll('#um-body input[type="text"],#um-body select'));
     const isLast=inputs.length===0||e.target===inputs[inputs.length-1]||e.target.tagName==='SELECT';
     if(isLast)submitModal();
     else{const idx=inputs.indexOf(e.target);if(idx>=0&&inputs[idx+1])inputs[idx+1].focus();}
