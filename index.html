@@ -10,7 +10,7 @@
 // ══════════════════════════════════════════════════
 // GUIDE SYSTEM
 // ══════════════════════════════════════════════════
- 
+
 // Search index
 const GUIDE_INDEX = [
   {topic:'planning', section:'Periodization', title:'What is periodization?', text:'Periodization is the systematic organization of training across a season to ensure athletes peak at the right moment. PB=Base, PP1-PP3=Preparation, PT=Transfer, PPF=Performance, COMP=Competition, PM=Maintenance, REST=Recovery.'},
@@ -3076,8 +3076,16 @@ async function submitModal(){
 }
 // close on overlay click
 document.getElementById('um-overlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
-// Enter key submits
-document.getElementById('um-overlay').addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA')submitModal();if(e.key==='Escape')closeModal();});
+// Enter key submits only from the last field or a select; Escape closes
+document.getElementById('um-overlay').addEventListener('keydown',function(e){
+  if(e.key==='Escape'){closeModal();return;}
+  if(e.key==='Enter'&&e.target.tagName!=='TEXTAREA'){
+    const inputs=Array.from(document.querySelectorAll('#um-body input,#um-body select'));
+    const isLast=inputs.length===0||e.target===inputs[inputs.length-1]||e.target.tagName==='SELECT';
+    if(isLast)submitModal();
+    else{const idx=inputs.indexOf(e.target);if(idx>=0&&inputs[idx+1])inputs[idx+1].focus();}
+  }
+});
 
 let _confirmCb=null;
 function openConfirm(msg,cb){
