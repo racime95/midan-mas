@@ -1000,7 +1000,7 @@ table.mt input,table.mt textarea,table.mt select{width:100%;border:.5px solid va
     <div class="card-head"><span class="card-title">Staff Records</span><button class="btn btn-gold btn-sm" onclick="addStaff()">+ Add staff</button></div>
     <div class="tbl-wrap card-body" style="padding:0">
       <table class="gt" style="min-width:900px">
-        <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Licence</th><th>Federation</th><th>Lic. Expiry</th><th>First Aid</th><th>Safeguarding</th><th>Contract End</th><th>Email</th><th>Phone</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Name</th><th>Role</th><th>Licence</th><th>Federation</th><th>Lic. Expiry</th><th>First Aid</th><th>Safeguarding</th><th>Contract End</th><th>Email</th><th>Phone</th><th>Arrival</th><th>Program Area</th><th></th></tr></thead>
         <tbody id="staff-body"></tbody>
       </table>
     </div>
@@ -2626,7 +2626,7 @@ function expColor(d){
 }
 function renderStaff(list){
   const tbody=document.getElementById('staff-body');
-  if(!list.length){tbody.innerHTML='<tr><td colspan="12" class="empty">No staff records yet.</td></tr>';return;}
+  if(!list.length){tbody.innerHTML='<tr><td colspan="14" class="empty">No staff records yet.</td></tr>';return;}
   tbody.innerHTML=list.map((s,i)=>`<tr>
     <td style="font-weight:700;color:var(--slate)">${i+1}</td>
     <td>${s.last_name||''} ${s.first_name||''}</td>
@@ -2639,6 +2639,8 @@ function renderStaff(list){
     <td style="font-size:11px;color:${expColor(s.contract_end)}">${s.contract_end||'—'}</td>
     <td style="font-size:11px">${s.work_email||'—'}</td>
     <td style="font-size:11px">${s.phone||'—'}</td>
+    <td style="font-size:11px">${s.arrival_date||'—'}</td>
+    <td style="font-size:11px">${s.program_area||'—'}</td>
     <td><button class="btn btn-red btn-sm" onclick="delStaff('${s.id}')">✕</button></td>
   </tr>`).join('');
 }
@@ -2655,6 +2657,8 @@ async function addStaff(){
     {id:'st_contend',label:'Contract End (YYYY-MM-DD)', type:'text',   val:''},
     {id:'st_email',  label:'Work Email',                type:'text',   val:''},
     {id:'st_phone',  label:'Phone',                     type:'text',   val:''},
+    {id:'st_arrival',label:'Arrival Date (YYYY-MM-DD)', type:'text',   val:''},
+    {id:'st_parea',  label:'Program Area',              type:'select', opts:['Creating Pathways','General Public Coaching and Engagement','Academy Coaching'],val:'Academy Coaching'},
   ], async function(v){
     if(!v.st_last){toast('Last name is required.','err');return false;}
     setSave('saving','Saving…');
@@ -2663,7 +2667,8 @@ async function addStaff(){
       licence_level:v.st_lic,federation:v.st_fed,
       licence_exp:v.st_licexp||null,firstaid_exp:v.st_aidexp||null,
       safeguarding:v.st_safe,contract_end:v.st_contend||null,
-      work_email:v.st_email,phone:v.st_phone
+      work_email:v.st_email,phone:v.st_phone,
+      arrival_date:v.st_arrival||null,program_area:v.st_parea||null
     });
     if(error){setSave('err','Error');toast('Save failed.','err');}
     else{setSave('ok','Saved');toast('Staff member added.','ok');loadStaff();}
